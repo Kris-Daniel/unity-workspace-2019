@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using DG.Tweening;
 using UnityEngine;
 
 [Serializable]
@@ -78,35 +77,37 @@ public class RayPoints : MonoBehaviour
         int i = legIndexDir > 0 ? 0 : 1;
         for (int j = 0; j < 4; j++)
         {
-            Vector3 initialLegPos = rayLegDataList[i].legTarget.position;
-            
-            Vector3 direction = rayLegDataList[i].rayHitObjectPos - initialLegPos;
-            direction *= 1.5f;
-            
-            float distanceRate = 0;
-            while (distanceRate < 1)
-            {
-                distanceRate = Mathf.Clamp01(distanceRate + Time.deltaTime * 5f);
-                float yPos = 0.5f * legMovementCurve.Evaluate(distanceRate);
-
-                rayLegDataList[i].legTarget.position = initialLegPos + direction * distanceRate;
-
-                Vector3 legLocalPos = rayLegDataList[i].legTarget.localPosition;
-                legLocalPos.y += yPos;
-                rayLegDataList[i].legTarget.localPosition = legLocalPos;
-                
-                yield return null;
-            }
-            
-            
-            //rayLegDataList[i].legTarget.DOMove(direction * 1.5f, 0.1f).SetRelative();
-            
+            StartCoroutine(MoveLeg(rayLegDataList[i]));
             i += legIndexDir;
             i = i >= 4 ? 0 : i;
             i = i < 0 ? 3 : i;
+            yield return new WaitForSeconds(0.1f);
         }
 
         _inMoveProcess = false;
+    }
+
+    IEnumerator MoveLeg(RayLegData rayLegData)
+    {
+        Vector3 initialLegPos = rayLegData.legTarget.position;
+            
+        Vector3 direction = rayLegData.rayHitObjectPos - initialLegPos;
+        direction *= 1.5f;
+            
+        float distanceRate = 0;
+        while (distanceRate < 1)
+        {
+            distanceRate = Mathf.Clamp01(distanceRate + Time.deltaTime * 5f);
+            float yPos = 0.5f * legMovementCurve.Evaluate(distanceRate);
+
+            rayLegData.legTarget.position = initialLegPos + direction * distanceRate;
+
+            Vector3 legLocalPos = rayLegData.legTarget.localPosition;
+            legLocalPos.y += yPos;
+            rayLegData.legTarget.localPosition = legLocalPos;
+                
+            yield return null;
+        }
     }
     
 
@@ -116,6 +117,10 @@ public class RayPoints : MonoBehaviour
         {
             Debug.DrawRay(rayLegData.rayFrom.position, -rayLegData.rayFrom.up * hit.distance, Color.yellow);
             rayLegData.rayHitObject.position = hit.point;
+        }
+        else
+        {
+            rayLegData.rayHitObject.position = rayLegData.rayFrom.position + -rayLegData.rayFrom.up;
         }
         
         float distance = Vector3.Distance(rayLegData.rayHitObject.position, rayLegData.legTarget.position);
