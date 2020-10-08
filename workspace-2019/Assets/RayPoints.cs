@@ -36,6 +36,7 @@ public class RayPoints : MonoBehaviour
         clearedBodyPos.y = midPointObject.position.y;
         
         var direction = clearedBodyPos.x - midPointObject.position.x;
+        int legIndexDir = direction > 0 ? 1 : -1;
         
         if(_inMoveProcess) return;
         
@@ -49,8 +50,7 @@ public class RayPoints : MonoBehaviour
         _inMoveProcess =  inMoveProcess;
         if (_inMoveProcess)
         {
-            var moveRoutine = direction > 0 ? ForwardMove(0) : BackMove(1);
-            StartCoroutine(moveRoutine);
+            StartCoroutine(MoveLegs(legIndexDir));
         }
     }
 
@@ -66,28 +66,16 @@ public class RayPoints : MonoBehaviour
 
         return midPoint;
     }
-
-    IEnumerator ForwardMove(int i)
-    {
-        for (int j = 0; j < 4; j++)
-        {
-            var direction = rayLegDataList[i].rayHitObject.position - rayLegDataList[i].legTarget.position;
-            rayLegDataList[i].legTarget.DOMove(direction * 1.5f, 0.1f).SetRelative();
-            i++;
-            i = i >= 4 ? 0 : i;
-            yield return new WaitForSeconds(0.1f);
-        }
-
-        _inMoveProcess = false;
-    }
     
-    IEnumerator BackMove(int i)
+    IEnumerator MoveLegs(int legIndexDir)
     {
+        int i = legIndexDir > 0 ? 0 : 1;
         for (int j = 0; j < 4; j++)
         {
             var direction = rayLegDataList[i].rayHitObject.position - rayLegDataList[i].legTarget.position;
             rayLegDataList[i].legTarget.DOMove(direction * 1.5f, 0.1f).SetRelative();
-            i--;
+            i += legIndexDir;
+            i = i >= 4 ? 0 : i;
             i = i < 0 ? 3 : i;
             yield return new WaitForSeconds(0.1f);
         }
