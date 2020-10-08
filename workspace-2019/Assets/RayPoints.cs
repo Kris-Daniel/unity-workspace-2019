@@ -32,7 +32,16 @@ public class RayPoints : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        midPointObject.position = GetMidPoint();
+        Vector3 midPos = GetMidPoint();
+
+        Vector3 bodyPos = transform.position;
+        
+        bodyPos.y = midPos.y + 0.5f;
+        
+        //transform.position = bodyPos;
+        
+        midPointObject.position = midPos;
+        
 
         var clearedBodyPos = transform.position;
         clearedBodyPos.y = midPointObject.position.y;
