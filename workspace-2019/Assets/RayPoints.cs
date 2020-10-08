@@ -10,12 +10,14 @@ public class RayLegData
     public Transform rayFrom;
     public Transform rayHitObject;
     public Transform legTarget;
+    public Vector3 rayHitObjectPos;
     public bool canMove;
 }
 
 public class RayPoints : MonoBehaviour
 {
     [SerializeField] Transform midPointObject;
+    [SerializeField] AnimationCurve legMovementCurve;
     [SerializeField] List<RayLegData> rayLegDataList;
     bool _inMoveProcess;
     int _layerMask;
@@ -38,7 +40,7 @@ public class RayPoints : MonoBehaviour
         var direction = clearedBodyPos.x - midPointObject.position.x;
         int legIndexDir = direction > 0 ? 1 : -1;
         
-        if(_inMoveProcess) return;
+        //if(_inMoveProcess) return;
         
         bool inMoveProcess = false;
         
@@ -46,12 +48,13 @@ public class RayPoints : MonoBehaviour
         {
             inMoveProcess = ArmRayCast(rayLegDataList[i]) || inMoveProcess;
         }
-        
-        _inMoveProcess =  inMoveProcess;
-        if (_inMoveProcess)
+
+        if (inMoveProcess && !_inMoveProcess)
         {
+            _inMoveProcess = true;
             StartCoroutine(MoveLegs(legIndexDir));
         }
+        
     }
 
     Vector3 GetMidPoint()
@@ -59,7 +62,7 @@ public class RayPoints : MonoBehaviour
         Vector3[] midPoints = new Vector3[2];
         for (int i = 0, j = 0; i < rayLegDataList.Count; i += 2, j++)
         {
-            midPoints[j] = (rayLegDataList[i].legTarget.position + rayLegDataList[i + 1].legTarget.position) / 2f;
+            midPoints[j] = (rayLegDataList[i].rayHitObject.position + rayLegDataList[i + 1].rayHitObject.position) / 2f;
         }
         
         Vector3 midPoint = (midPoints[0] + midPoints[1]) / 2f;
@@ -69,15 +72,40 @@ public class RayPoints : MonoBehaviour
     
     IEnumerator MoveLegs(int legIndexDir)
     {
+        for (int j = 0; j < 4; j++)
+        {
+            rayLegDataList[j].rayHitObjectPos = rayLegDataList[j].rayHitObject.position;
+        }
+        
         int i = legIndexDir > 0 ? 0 : 1;
         for (int j = 0; j < 4; j++)
         {
-            var direction = rayLegDataList[i].rayHitObject.position - rayLegDataList[i].legTarget.position;
-            rayLegDataList[i].legTarget.DOMove(direction * 1.5f, 0.1f).SetRelative();
+            Vector3 initialLegPos = rayLegDataList[i].legTarget.position;
+            
+            Vector3 direction = rayLegDataList[i].rayHitObjectPos - initialLegPos;
+            direction *= 1.5f;
+            
+            float distanceRate = 0;
+            while (distanceRate < 1)
+            {
+                distanceRate = Mathf.Clamp01(distanceRate + Time.deltaTime * 5f);
+                float yPos = 0.5f * legMovementCurve.Evaluate(distanceRate);
+
+                rayLegDataList[i].legTarget.position = initialLegPos + direction * distanceRate;
+
+                Vector3 legLocalPos = rayLegDataList[i].legTarget.localPosition;
+                legLocalPos.y += yPos;
+                rayLegDataList[i].legTarget.localPosition = legLocalPos;
+                
+                yield return null;
+            }
+            
+            
+            //rayLegDataList[i].legTarget.DOMove(direction * 1.5f, 0.1f).SetRelative();
+            
             i += legIndexDir;
             i = i >= 4 ? 0 : i;
             i = i < 0 ? 3 : i;
-            yield return new WaitForSeconds(0.1f);
         }
 
         _inMoveProcess = false;
