@@ -9,6 +9,7 @@ public class ArmRayController : MonoBehaviour
 
     int _layerMask;
     bool _inStep;
+    Vector3 _lastRayPos;
     
     // Start is called before the first frame update
     void Start()
@@ -33,6 +34,7 @@ public class ArmRayController : MonoBehaviour
         if (distance > 0.7f && !_inStep)
         {
             _inStep = true;
+            _lastRayPos = ArmRayPoint.position;
             StartCoroutine(MakeStep());
         }
         
@@ -40,9 +42,9 @@ public class ArmRayController : MonoBehaviour
 
     IEnumerator MakeStep()
     {
-        while (Vector3.Distance(ArmRayPoint.position, LegTarget.position) > 0.1f)
+        while (Vector3.Distance(_lastRayPos, LegTarget.position) > 0.1f)
         {
-            LegTarget.position = Vector3.MoveTowards(LegTarget.position, ArmRayPoint.position, Time.deltaTime);
+            LegTarget.position = Vector3.MoveTowards(LegTarget.position, _lastRayPos, Time.deltaTime * 10f);
             yield return null;
         }
 
