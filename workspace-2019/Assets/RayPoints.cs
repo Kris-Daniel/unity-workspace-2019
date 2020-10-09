@@ -10,7 +10,6 @@ public class RayLegData
     public Transform rayHitObject;
     public Transform legTarget;
     public Vector3 rayHitObjectPos;
-    public bool canMove;
 }
 
 public class RayPoints : MonoBehaviour
@@ -18,6 +17,9 @@ public class RayPoints : MonoBehaviour
     [SerializeField] Transform midPointObject;
     [SerializeField] AnimationCurve legMovementCurve;
     [SerializeField] List<RayLegData> rayLegDataList;
+    
+    public bool IsOnGround { get; private set; }
+    
     bool _inMoveProcess;
     int _layerMask;
     
@@ -40,13 +42,19 @@ public class RayPoints : MonoBehaviour
         int legIndexDir = direction > 0 ? 1 : -1;
         
         bool inMoveProcess = false;
+        bool isOnGround = true;
         
         for (int i = 0; i < rayLegDataList.Count; i++)
         {
-            inMoveProcess = ArmRayCast(rayLegDataList[i]) || inMoveProcess;
+            var tuple = ArmRayCast(rayLegDataList[i]);
+            inMoveProcess = tuple.Item1 || inMoveProcess;
+            isOnGround = tuple.Item2 && isOnGround;
         }
+        
 
-        if (inMoveProcess && !_inMoveProcess)
+        IsOnGround = isOnGround; 
+
+        if (inMoveProcess && !_inMoveProcess && IsOnGround)
         {
             _inMoveProcess = true;
             StartCoroutine(MoveLegs(legIndexDir));
@@ -81,7 +89,7 @@ public class RayPoints : MonoBehaviour
             i += legIndexDir;
             i = i >= 4 ? 0 : i;
             i = i < 0 ? 3 : i;
-            yield return new WaitForSeconds(0.1f);
+            yield return new WaitForSeconds(0.05f);
         }
 
         _inMoveProcess = false;
@@ -97,7 +105,7 @@ public class RayPoints : MonoBehaviour
         float distanceRate = 0;
         while (distanceRate < 1)
         {
-            distanceRate = Mathf.Clamp01(distanceRate + Time.deltaTime * 5f);
+            distanceRate = Mathf.Clamp01(distanceRate + Time.deltaTime * 10f);
             float yPos = 0.5f * legMovementCurve.Evaluate(distanceRate);
 
             rayLegData.legTarget.position = initialLegPos + direction * distanceRate;
@@ -109,14 +117,17 @@ public class RayPoints : MonoBehaviour
             yield return null;
         }
     }
-    
 
-    bool ArmRayCast(RayLegData rayLegData)
+
+    (bool, bool) ArmRayCast(RayLegData rayLegData)
     {
-        if (Physics.Raycast(rayLegData.rayFrom.position, -rayLegData.rayFrom.up, out var hit, Mathf.Infinity, _layerMask))
+        var tuple = (isTooFar: false, isOnGround: false);
+        
+        if (Physics.Raycast(rayLegData.rayFrom.position, -rayLegData.rayFrom.up, out var hit, 2f, _layerMask))
         {
             Debug.DrawRay(rayLegData.rayFrom.position, -rayLegData.rayFrom.up * hit.distance, Color.yellow);
             rayLegData.rayHitObject.position = hit.point;
+            tuple.isOnGround = true;
         }
         else
         {
@@ -125,6 +136,8 @@ public class RayPoints : MonoBehaviour
         
         float distance = Vector3.Distance(rayLegData.rayHitObject.position, rayLegData.legTarget.position);
 
-        return distance > 0.5f;
+        tuple.isTooFar = distance > 0.5f;
+
+        return tuple;
     }
 }
